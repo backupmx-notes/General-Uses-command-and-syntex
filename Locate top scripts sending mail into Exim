@@ -1,0 +1,10 @@
+===================================================================================================
+#grep cwd /var/log/exim_mainlog | grep -v /var/spool | awk -F"cwd=" '{print $2}' | awk '{print $1}' | sort | uniq -c | sort -n
+
+Now we can run the following command to see what scripts are located in that directory:
+#ls -lahtr /home/ae5a2e57/public_html/myweekendtrips.com/wp-admin.....
+
+Knowing the mailer.php script was sending mail into Exim, we can now take a look at our Apache access log to see what IP addresses are accessing this script using the following command:
+
+#grep "mailer.php" //var/log/apache2/access-logs | awk '{print $1}' | sort -n | uniq -c | sort -n
+===================================================================================================
