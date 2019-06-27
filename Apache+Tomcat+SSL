@@ -1,0 +1,82 @@
+Lets assume that you have installed apache and tomcat over centos and application is running over http now need SSL so 
+lets confiugre SSL here for my domain/tomcat.
+============================================================================================
+Server IP address 1.1.1.1
+Tomcat is running on 8080 URL https://1.1.1.1:8080/
+domain name is example.com
+Your tomcat application name [app1] with is running on https://1.1.1.1:8080/app1 we will run the application as direct to example.com using proxypass rules
+Website DocumentRoot /var/www/example.com/html
+Want to run tomcat applicaiton [ app1 ] on my website direct to example.com
+
+NoTE: As we are running the application [ app1 ] direct to domain [ example.com] then we will set proxypass as [ / ] and after this 
+your files under directory /var/www/example.com/html will not usable casue proxyrule run the tomcat application direct for website with [ /]
+
+============================================================================================
+
+Step 1: Copy one by one files from SSL Certificate bundle as below using VI editor under direcotry /root/ssl/
+============================================================================================
+cd /root
+mkdir ssl
+cd ssl
+============================================================================================
+
+============================================================================================
+1)	domain.crt = data copy from certificate
+2)	domain_key.key = data copy from private key
+3)	domain_bundle.crt = data copy from Certificate Bundle
+============================================================================================
+
+After that We will use below command to create SSL with "PKCS12" format with password 1234567 to get new file as .p12 [ mycert.p12 ]
+
+============================================================================================
+openssl pkcs12 -export -in domain.crt -inkey domain_key.key -out mycert.p12 -name tomcat -CAfile domain_bundle.crt -caname root -chain
+============================================================================================
+
+With above command one new file “mycert.p12” created. Which I have updated in tomcat main file server.xml.
+
+Note: p12 file location is now /root/ssl/mycert.p12
+
+Step 2: Let go to your tomcat conf direcotry and add below paramter in the server.xml file [ do not need to edit/remote any lines just add
+belows parameters.
+
+============================================================================================
+<Connector port="8443" protocol="org.apache.coyote.http11.Http11NioProtocol"
+        maxThreads="150" SSLEnabled="true" scheme="https" secure="true"
+        clientAuth="false" sslProtocol="TLS" keystoreFile="/root/ssl/mycert.p12" keystoreType="PKCS12" keystorePass="12345678"/>
+============================================================================================
+
+Now restart the tomcat and you will see that ssl start working on https://1.1.1.1:8443
+
+
+Step 3: Now we are going to confiure the SSL on Apache for example.com
+
+Go-to your vhost directory of example.com under /etc/httpd/conf.d/ and edit the vhost file example_com.conf and append belows Vhost parameters.
+after createing new <VirtualHost example.co:443> </VirtualHost example.co:443> with your exact Direcy root proxypass etc.
+
+<VirtualHost example.com:443>
+ ServerName example.com
+ ServerAlias www.example.com
+ DocumentRoot /var/www/example.com/html
+
+    <Directory  /var/www/example.com/html/>
+        Options Indexes FollowSymLinks ExecCGI Includes
+        AllowOverride All
+        Require all granted
+        DirectoryIndex index.html
+   </Directory>
+
+ProxyRequests Off
+ProxyPreserveHost On
+    	ProxyPass / http://localhost:8080/app1/
+     	ProxyPassReverse / http://localhost:8080/app1/
+     	ProxyPassReverseCookiePath / http://localhost:8080/app1/
+
+SSLEngine on
+	SSLCertificateFile /root/ssl/domain.crt
+  SSLCertificateKeyFile /root/ssl/domain_key.key       
+	SSLCACertificateFile /root/ssl/domain_bundle.crt
+</VirtualHost>
+
+Now restart apache and tomcat both and check the domain by https://example.com you will see SSL will working if not then cehck the 
+logs and syntxt etc.
+
